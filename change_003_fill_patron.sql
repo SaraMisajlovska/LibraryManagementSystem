@@ -1,9 +1,3 @@
--- insert statement for memberships
-INSERT INTO membership (price, package)
-VALUES (150.0, 'STUDENT'),
-       (200.0, 'STANDARD'),
-       (300.0, 'SENIOR');
-
 --sequence that creates a patron card number and make it default for the patron's card_number
 CREATE SEQUENCE card_number_seq
     increment 3
@@ -20,6 +14,5 @@ SELECT u.email,
        u.date_of_birth,
        u.address,
        u.phone_number,
-       (floor(random() * (6 - 4 + 1) + 4)::int)
+       (floor(random() * (3 - 1 + 1) + 1)::int)
 FROM library_user u;
-
