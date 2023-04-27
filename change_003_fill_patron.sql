@@ -1,5 +1,5 @@
 --sequence that creates a patron card number and make it default for the patron's card_number
-CREATE SEQUENCE card_number_seq
+CREATE SEQUENCE IF NOT EXISTS card_number_seq
     increment 3
     start 100005;
 ALTER TABLE patron ALTER COLUMN card_number SET DEFAULT nextval('card_number_seq');
