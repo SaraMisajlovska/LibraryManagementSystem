@@ -205,6 +205,67 @@ CREATE TABLE event_users
 
 --End of DDL
 
+--import default values
+INSERT INTO membership(id, price, package)
+VALUES (0, 0.00, 'NONE');
+
+-- Insert unknown user used for default value on referential constraints
+INSERT INTO library_user(id, email, user_password, first_name, last_name, date_of_birth, address, phone_number)
+SELECT 0,
+       'unknown',
+       'password',
+       'unknown',
+       'unknown',
+       NOW(),
+       'unknown',
+       '0000000000';
+
+-- Insert unknown user used for default value on referential constraints
+INSERT INTO patron
+(id, email, user_password, first_name, last_name, date_of_birth, address, phone_number, card_number, membership_id)
+SELECT -1,
+       'unknown_patron',
+       'password',
+       'unknown',
+       'unknown',
+       NOW(),
+       'unknown',
+       '0000000000',
+       -1,
+       0;
+
+-- Insert unknown user used for default value on referential constraints
+INSERT INTO librarian(id, email, user_password, first_name, last_name, date_of_birth, address, phone_number, job_title,
+                      hire_date)
+SELECT -2,
+       'unknown_librarian',
+       'password',
+       'unknown',
+       'unknown',
+       NOW(),
+       'unknown',
+       '0000000000',
+       'unknown',
+       NOW();
+
+INSERT INTO publisher(id, publisher_name, publisher_address, contact)
+VALUES (0, 'unknown', 'unknown', 'unknown');
+
+
+INSERT INTO author(id, author_name, birth_date)
+VALUES (0, 'unknown', NOW());
+
+
+INSERT INTO book(id, title, publisher_id, publication_date, summary)
+VALUES (0, 'unknown', 0, NOW(), 'unknown');
+
+INSERT INTO book_location(id, section, shelf)
+VALUES (0, 'unknown', -1);
+
+INSERT INTO book_copy(id, book_id, location_id, edition, book_format)
+VALUES (0, 0, 0, 0, 'UNKNOWN');
+
+
 -- insert statement for memberships
 INSERT INTO membership (price, package)
 VALUES (150.0, 'STUDENT'),
