@@ -175,7 +175,7 @@ CREATE TABLE book_borrow
     book_return           DATE              NULL,
     damage                VARCHAR(255)      NULL,
     checkout_librarian_id INTEGER DEFAULT 0 NOT NULL REFERENCES librarian (id) ON DELETE SET DEFAULT,
-    return_librarian_id   INTEGER DEFAULT 0 NOT NULL REFERENCES librarian (id) ON DELETE SET DEFAULT
+    return_librarian_id   INTEGER DEFAULT 0 NULL REFERENCES librarian (id) ON DELETE SET DEFAULT
 );
 
 CREATE TABLE book_reservation
