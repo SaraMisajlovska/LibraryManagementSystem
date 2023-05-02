@@ -207,7 +207,7 @@ CREATE TABLE event_users
 
 --import default values
 INSERT INTO membership(id, price, package)
-VALUES (0, 0.00, 'NONE');
+VALUES (0, 0.00, 'STANDARD');
 
 -- Insert unknown user used for default value on referential constraints
 INSERT INTO library_user(id, email, user_password, first_name, last_name, date_of_birth, address, phone_number)
@@ -263,7 +263,7 @@ INSERT INTO book_location(id, section, shelf)
 VALUES (0, 'unknown', -1);
 
 INSERT INTO book_copy(id, book_id, location_id, edition, book_format)
-VALUES (0, 0, 0, 0, 'UNKNOWN');
+VALUES (0, 0, 0, 0, 'PAPERBACK');
 
 
 -- insert statement for memberships
