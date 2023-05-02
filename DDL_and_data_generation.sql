@@ -380,7 +380,8 @@ CROSS JOIN generate_series(1,600);
 
 --insert in book_author
 INSERT INTO book_author(book_id, author_id)
-SELECT book.id, author.id FROM book NATURAL JOIN author;
+SELECT book.id, author.id FROM book CROSS JOIN author;
+
 
 --import book_category.csv
 --import book_review.csv
@@ -404,7 +405,7 @@ FROM library_event e
     ORDER BY random()
     LIMIT 50
     ) AS u
-WHERE e.id < 100;
+WHERE e.id < 100 AND e.id >0;
 
 INSERT INTO event_users (event_id, user_id, user_type)
 SELECT e.id                                                        AS event_id,
@@ -483,7 +484,7 @@ FROM library_event e
     SELECT id,
            user_password
     FROM library_user
-    where id > 100
+    where id > 1000
       and id < 2000
     ORDER BY random()
     LIMIT 50
@@ -507,20 +508,3 @@ FROM library_event e
     ) AS u
 WHERE e.id >= 3000
   AND e.id < 4000;
-
-INSERT INTO event_users (event_id, user_id, user_type)
-SELECT e.id                                                        AS event_id,
-       u.id                                                        AS user_id,
-       CASE WHEN random() < 0.2 THEN 'LIBRARIAN' ELSE 'PATRON' END AS user_type
-FROM library_event e
-         CROSS JOIN LATERAL (
-    SELECT id,
-           user_password
-    FROM library_user
-    where id > 100
-      and id < 1000
-    ORDER BY random()
-    LIMIT 50
-    ) AS u
-WHERE e.id >= 4000
-  AND e.id < 4600
