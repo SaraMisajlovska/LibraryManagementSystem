@@ -80,3 +80,12 @@ SELECT u.first_name,
 FROM library_user u
          JOIN patron p ON u.id = p.id
          JOIN membership m ON p.membership_id = m.id;
+
+--view 2 - browse events
+CREATE MATERIALIZED VIEW event_attendance AS
+SELECT e.id as event_id, e.event_name, e.description, e.event_datetime, COUNT(DISTINCT eu.user_id) as num_attendees
+FROM library_event e
+JOIN event_users eu ON eu.event_id = e.id
+GROUP BY e.id, e.event_name, e.description, e.event_datetime;
+
+refresh materialized view event_attendance;
