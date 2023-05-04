@@ -165,7 +165,8 @@ SELECT
     ELSE 'AVAILABLE'
   END AS status,
   CASE
-    WHEN book_copy.id IN (SELECT book_copy_id FROM book_borrow) THEN (SELECT CONCAT(librarian.first_name, ' ', librarian.last_name) FROM librarian INNER JOIN book_borrow ON librarian.id = book_borrow.librarian_id WHERE book_copy.id = book_borrow.book_copy_id)
+      --checkout ili return librarian id ni treba tuka? soe razlikata ne sfakam
+    WHEN book_copy.id IN (SELECT book_copy_id FROM book_borrow) THEN (SELECT CONCAT(librarian.first_name, ' ', librarian.last_name) FROM librarian INNER JOIN book_borrow ON librarian.id = book_borrow.checkout_librarian_id WHERE book_copy.id = book_borrow.book_copy_id)
     ELSE (SELECT CONCAT(book_location.section, '-', book_location.shelf) FROM book_location WHERE book_location.id = book_copy.location_id)
   END AS location
 FROM book_copy
