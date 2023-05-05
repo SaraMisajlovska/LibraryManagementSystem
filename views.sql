@@ -90,13 +90,12 @@ GROUP BY u.id, u.first_name, u.last_name, u.date_of_birth, u.address, u.phone_nu
 
 
 --view 2 - browse events
-CREATE MATERIALIZED VIEW event_attendance AS
+CREATE VIEW event_attendance AS
 SELECT e.id as event_id, e.event_name, e.description, e.event_datetime, COUNT(DISTINCT eu.user_id) as num_attendees
 FROM library_event e
          JOIN event_users eu ON eu.event_id = e.id
 GROUP BY e.id, e.event_name, e.description, e.event_datetime;
 
-refresh materialized view event_attendance;
 
 
 --view 12 show reading list
