@@ -128,8 +128,8 @@ FROM library_user;
 
 --view 5 Check book details, author, publisher, rating, review, and availability for book (user view)
 CREATE VIEW book_details AS
-SELECT b.id                                                         AS book_id,
-       b.title                                                      AS book_title,
+SELECT b.id              AS book_id,
+       b.title           AS book_title,
        p.publisher_name,
        a.author_name,
        bc.edition,
@@ -164,11 +164,10 @@ SELECT book.title            AS book_title,
        book_copy.edition     AS edition,
        book_copy.book_format AS format,
        CASE
-           WHEN book_copy.id IN (SELECT book_copy_id FROM book_borrow) THEN 'BORROWED'
+           WHEN book_copy.id IN (SELECT book_copy_id FROM book_borrow WHERE book_return is NULL) THEN 'BORROWED'
            ELSE 'AVAILABLE'
            END               AS status,
        CASE
-           --checkout ili return librarian id ni treba tuka? soe razlikata ne sfakam
            WHEN book_copy.id IN (SELECT book_copy_id FROM book_borrow)
                THEN (SELECT CONCAT(librarian.first_name, ' ', librarian.last_name)
                      FROM librarian
@@ -180,6 +179,7 @@ SELECT book.title            AS book_title,
            END               AS location
 FROM book_copy
          INNER JOIN book ON book_copy.book_id = book.id;
+
 
 --view 11 show history of borrow
 CREATE VIEW borrowed_books_history AS
