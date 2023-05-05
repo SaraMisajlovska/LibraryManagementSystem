@@ -18,7 +18,7 @@ SELECT p.first_name                    AS patron_first_name,
        c.category_name                 AS book_category,
        r.reservation_date              AS reservation_date,
        r.reservation_status            AS reservation_status
-FROM book_reservation_new r
+FROM book_reservation r
          JOIN book_copy bc ON bc.id = r.book_copy_id
          JOIN book b ON b.id = bc.book_id
          JOIN book_category bcg ON bcg.book_id = b.id
@@ -38,7 +38,7 @@ SELECT p.first_name,
        string_agg(a.author_name, ', ')   AS book_author,
        string_agg(c.category_name, ', ') AS book_category,
        br.reservation_date
-FROM book_reservation_new br
+FROM book_reservation br
          JOIN patron p ON p.id = br.user_id
          JOIN book_copy bc ON bc.id = br.book_copy_id
          JOIN book b ON b.id = bc.book_id
