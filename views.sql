@@ -176,3 +176,19 @@ FROM book_borrow bb
          JOIN category c ON bca.category_id = c.id
 group by bb.book_return, a.author_name, bc.book_format, bb.book_checkout, bb.damage, b.title, p.card_number,
          u.first_name, u.last_name, bb.id;
+
+-- View 13: How many times a specific title has been borrowed
+CREATE OR REPLACE VIEW book_title_borrow_count AS
+SELECT b.title,
+       COUNT(*) AS borrow_count
+FROM book_copy c
+         INNER JOIN book b ON b.id = c.book_id
+         INNER JOIN book_borrow bb ON bb.book_copy_id = c.id
+GROUP BY b.title;
+
+-- View 14: How many times a book copy has been borrowed
+CREATE OR REPLACE VIEW copy_borrow_count AS
+SELECT book_copy_id, COUNT(*) AS borrow_count
+FROM book_borrow
+WHERE book_return IS NOT NULL
+GROUP BY book_copy_id;
