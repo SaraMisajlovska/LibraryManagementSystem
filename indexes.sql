@@ -35,3 +35,12 @@ SET membership_id = 3
 WHERE id = 12345678;
 
 CREATE INDEX idx_patron_card_number ON patron (card_number);
+
+INSERT INTO book_reservation (user_id, book_copy_id, reservation_date, reservation_status)
+VALUES (20000, 200, '2023-05-20', 'ACTIVE');
+
+UPDATE book_reservation
+SET reservation_status = 'INACTIVE'
+WHERE id = 51;
+
+CREATE INDEX idx_reservation_status ON book_reservation (reservation_status);
