@@ -127,6 +127,7 @@ FROM search_books(NULL, NULL, 'THRILLER');
 CREATE FUNCTION search_authors(p_author_name varchar)
     RETURNS TABLE
             (
+                r_id          int,
                 r_author_name varchar,
                 r_birth_date  date,
                 r_biography   text
@@ -135,7 +136,7 @@ AS
 $$
 BEGIN
     RETURN QUERY
-        SELECT author_name, birth_date, biography
+        SELECT id, author_name, birth_date, biography
         FROM author
         WHERE author_name ILIKE '%' || p_author_name || '%';
 END;
@@ -153,6 +154,7 @@ FROM search_authors(NULL);
 CREATE FUNCTION search_events(p_event_name varchar, p_event_datetime date)
     RETURNS TABLE
             (
+                r_id          int,
                 r_event_name     varchar(255),
                 r_description    text,
                 r_event_datetime timestamp
@@ -161,7 +163,7 @@ AS
 $$
 BEGIN
     RETURN QUERY
-        SELECT event_name, description, event_datetime
+        SELECT id, event_name, description, event_datetime
         FROM library_event
         WHERE (p_event_name IS NULL OR event_name ILIKE '%' || p_event_name || '%')
           AND (p_event_datetime IS NULL OR DATE(event_datetime) = p_event_datetime);
