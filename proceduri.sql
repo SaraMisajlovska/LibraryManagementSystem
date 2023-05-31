@@ -237,6 +237,10 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+
+-- MUST EXECUTE: reset primary key sequence for book borrow
+SELECT pg_catalog.setval(pg_get_serial_sequence('book_review', 'id'), MAX(id)) FROM book_review;
+-- test successful book review
 SELECT insert_book_review(4, 1, 'This book is fantastic!');
 
 
