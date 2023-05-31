@@ -283,7 +283,7 @@ CREATE FUNCTION insert_book_reservation(
     RETURNS void AS
 $$
 BEGIN
-    INSERT INTO book_reservation_new (book_copy_id, user_id, reservation_status, reservation_date)
+    INSERT INTO book_reservation (book_copy_id, user_id, reservation_status, reservation_date)
     VALUES (p_book_copy_id, p_patron_id, 'ACTIVE', p_reservation_date);
 
     -- Check if the insert was successful
