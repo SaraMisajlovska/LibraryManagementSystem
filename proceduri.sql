@@ -1,186 +1,331 @@
---register
-CREATE OR REPLACE FUNCTION create_patron(
-    p_card_number INTEGER,
-    p_membership_id INTEGER,
-    p_email VARCHAR(255),
-    p_user_password VARCHAR(255),
-    p_first_name VARCHAR(255),
-    p_last_name VARCHAR(255),
-    p_date_of_birth DATE,
-    p_address TEXT,
-    p_phone_number VARCHAR(20)
-) RETURNS VOID AS
-$$
-BEGIN
-    INSERT INTO patron (card_number, membership_id, email, user_password, first_name, last_name, date_of_birth, address,
-                        phone_number)
-    VALUES (p_card_number, p_membership_id, p_email, p_user_password, p_first_name, p_last_name, p_date_of_birth,
-            p_address, p_phone_number);
-END;
-
-
---login patron
-    CREATE OR REPLACE PROCEDURE patron_login(
-    p_email VARCHAR(255),
-    p_password VARCHAR(255),
-    OUT p_user_id INTEGER,
-    OUT p_login_success BOOLEAN
-) AS $$
-BEGIN
-p_user_id := NULL;
-p_login_success := FALSE;
-
-SELECT id
-INTO p_user_id
-FROM library_user
-WHERE email = p_email
-  AND user_password = p_password;
-
-IF p_user_id IS NOT NULL THEN
-        p_login_success := TRUE;
-END IF;
-END;
-
-
---Get the total number of books borrowed by a patron
-CREATE OR REPLACE FUNCTION get_total_borrowed_books(
-    p_patron_id INTEGER
-) RETURNS INTEGER AS
+-- 1. Create the login function
+CREATE FUNCTION login(p_email varchar, p_password varchar)
+    RETURNS BOOLEAN AS
 $$
 DECLARE
-    total_borrowed INTEGER;
+    user_exists BOOLEAN;
 BEGIN
-    SELECT COUNT(*)
-    INTO total_borrowed
-    FROM book_borrow
-    WHERE user_id = p_patron_id;
+    -- Check if the user exists in the table
+    SELECT EXISTS (SELECT 1
+                   FROM library_user
+                   WHERE email = p_email
+                     AND user_password = p_password)
+    INTO user_exists;
 
-    RETURN total_borrowed;
+    RETURN user_exists;
 END;
+$$ LANGUAGE plpgsql;
+
+-- test successful login
+SELECT login('Evelyne.Racicot@library.com', 'pass61301');
+-- test failed login
+SELECT login('Evelyne.Racicot@library.com', '123');
 
 
---List authors by name
-    CREATE OR REPLACE PROCEDURE list_authors_by_name(
-    p_name VARCHAR(255)
-) AS $$
+
+-- 2. Create the register function for patron user
+CREATE FUNCTION register_patron(
+    p_email varchar,
+    p_user_password varchar,
+    p_first_name varchar,
+    p_last_name varchar,
+    p_date_of_birth date,
+    p_address text,
+    p_phone_number varchar,
+    p_card_number integer,
+    p_membership_id integer
+)
+    RETURNS VOID AS
+$$
 BEGIN
+    -- Insert the patron into the patron table
+    INSERT INTO patron (email, user_password, first_name, last_name, date_of_birth, address, phone_number, card_number,
+                        membership_id)
+    VALUES (p_email, p_user_password, p_first_name, p_last_name, p_date_of_birth, p_address, p_phone_number,
+            p_card_number, p_membership_id);
+
+    -- Check if the insert was successful
+    IF FOUND THEN
+        -- Output success message
+        RAISE NOTICE 'Registration successful.';
+    ELSE
+        -- Output error message
+        RAISE EXCEPTION 'Registration failed.';
+    END IF;
+
+
+    RETURN;
+END;
+$$ LANGUAGE plpgsql;
+
+-- test successful patron register
+SELECT register_patron(
+               'test@test.com',
+               'test123456',
+               'Test',
+               'Test',
+               '1990-01-01',
+               'Test',
+               '1234567890',
+               '123456',
+               1
+           );
+
+-- test failed patron register (same query, but after success, this will fail)
+SELECT register_patron(
+               'test@test.com',
+               'test123456',
+               'Test',
+               'Test',
+               '1990-01-01',
+               'Test',
+               '1234567890',
+               '123456',
+               1
+           );
+
+
+
+-- 3. Search books by title, author or category
+CREATE FUNCTION search_books(
+    p_author_name varchar,
+    p_title varchar,
+    p_category_name varchar
+)
+    RETURNS TABLE
+            (
+                r_title            varchar,
+                r_author_name      varchar,
+                r_category_name    varchar,
+                r_publication_date date
+            )
+AS
+$$
+BEGIN
+    RETURN QUERY
+        SELECT title, author_name, category_name, publication_date
+        FROM book_search_view
+        WHERE (p_author_name IS NULL OR author_name ILIKE '%' || p_author_name || '%')
+          AND (p_title IS NULL OR title ILIKE '%' || p_title || '%')
+          AND (p_category_name IS NULL OR category_name ILIKE '%' || p_category_name || '%');
+END;
+$$ LANGUAGE plpgsql;
+
+-- test successful book search
 SELECT *
-FROM author
-WHERE author_name ILIKE '%' || p_name || '%';
-END;
+FROM search_books('Tony Robbins', 'Female Intelligence', 'THRILLER');
+SELECT *
+FROM search_books('Tony Robbins', NULL, NULL);
+SELECT *
+FROM search_books(NULL, 'Female Intelligence', NULL);
+SELECT *
+FROM search_books(NULL, NULL, 'THRILLER');
 
 
--- List events by date or title
-CREATE OR REPLACE PROCEDURE list_events_by_date_and_title(
-    p_start_date DATE,
-    p_end_date DATE,
-    p_title VARCHAR(255)
-) AS
+
+-- 4. Search author by name
+CREATE FUNCTION search_authors(p_author_name varchar)
+    RETURNS TABLE
+            (
+                r_author_name varchar,
+                r_birth_date  date,
+                r_biography   text
+            )
+AS
 $$
 BEGIN
-    SELECT *
-    FROM library_event
-    WHERE (event_datetime >= p_start_date AND event_datetime <= p_end_date)
-       OR event_name ILIKE '%' || p_title || '%';
+    RETURN QUERY
+        SELECT author_name, birth_date, biography
+        FROM author
+        WHERE author_name ILIKE '%' || p_author_name || '%';
 END;
+$$ LANGUAGE plpgsql;
+
+-- test successful author search
+SELECT *
+FROM search_authors('Tony Robbins');
+SELECT *
+FROM search_authors(NULL);
 
 
---Search books by category
-    CREATE OR REPLACE FUNCTION search_books_by_category(
-    p_category_name VARCHAR(255)
-) RETURNS TABLE (
-    book_id INTEGER,
-    title VARCHAR(255),
-    publisher_id INTEGER,
-    publication_date DATE,
-    summary TEXT,
-    edition INTEGER,
-    book_format VARCHAR(255)
-) AS $$
+
+-- 5. Search events by name or date
+CREATE FUNCTION search_events(p_event_name varchar, p_event_datetime date)
+    RETURNS TABLE
+            (
+                r_event_name     varchar(255),
+                r_description    text,
+                r_event_datetime timestamp
+            )
+AS
+$$
 BEGIN
-RETURN QUERY
-SELECT b.id, b.title, b.publisher_id, b.publication_date, b.summary, bc.edition, bc.book_format
-FROM book b
-         JOIN book_category bc ON b.id = bc.book_id
-         JOIN category c ON bc.category_id = c.id
-WHERE c.category_name = p_category_name;
-
-RETURN;
+    RETURN QUERY
+        SELECT event_name, description, event_datetime
+        FROM library_event
+        WHERE (p_event_name IS NULL OR event_name ILIKE '%' || p_event_name || '%')
+          AND (p_event_datetime IS NULL OR DATE(event_datetime) = p_event_datetime);
 END;
+$$ LANGUAGE plpgsql;
+
+-- test successful event search
+SELECT *
+FROM search_events('Baby Storytime', NULL);
+SELECT *
+FROM search_events('Baby Storytime', '2025-03-24');
+SELECT *
+FROM search_events(NULL, '2025-03-24');
 
 
---How many events has a user visited
-CREATE OR REPLACE FUNCTION count_visited_events(
-    p_user_id INTEGER
-) RETURNS INTEGER AS
+
+-- 6. Insert a book copy (for librarian user)
+CREATE FUNCTION insert_book_copy(
+    p_book_id integer,
+    p_location_id integer,
+    p_edition integer,
+    p_book_format varchar
+)
+    RETURNS VOID AS
+$$
+BEGIN
+    -- Insert the book copy into the book_copy table
+    INSERT INTO book_copy (book_id, location_id, edition, book_format)
+    VALUES (p_book_id, p_location_id, p_edition, p_book_format);
+
+    -- Check if the insert was successful
+    IF FOUND THEN
+        -- Output success message or perform additional actions
+        RAISE NOTICE 'Book copy inserted successfully.';
+    ELSE
+        -- Output error message or perform error handling
+        RAISE EXCEPTION 'Failed to insert book copy.';
+    END IF;
+
+    RETURN;
+END;
+$$ LANGUAGE plpgsql;
+
+-- test insert book copy successfully
+SELECT *
+FROM insert_book_copy(10, 375, 1, 'PAPERBACK');
+
+
+
+-- 7. Insert a book review (for patron user)
+CREATE FUNCTION insert_book_review(
+    p_patron_id integer,
+    p_book_id integer,
+    p_review text
+)
+    RETURNS VOID AS
+$$
+BEGIN
+    -- Insert the book review into the book_review table
+    INSERT INTO book_review (user_id, book_id, review)
+    VALUES (p_patron_id, p_book_id, p_review);
+
+    -- Check if the insert was successful
+    IF FOUND THEN
+        -- Output success message or perform additional actions
+        RAISE NOTICE 'Book review inserted successfully.';
+    ELSE
+        -- Output error message or perform error handling
+        RAISE EXCEPTION 'Failed to insert book review.';
+    END IF;
+
+    RETURN;
+END;
+$$ LANGUAGE plpgsql;
+
+SELECT insert_book_review(4, 1, 'This book is fantastic!');
+
+
+
+-- 8. Borrow a book (librarian user to inserts book borrow for patron)
+CREATE FUNCTION insert_book_borrow(
+    p_user_id integer,
+    p_book_copy_id integer,
+    p_book_checkout date,
+    p_checkout_librarian_id integer
+)
+    RETURNS void AS
+$$
+BEGIN
+    INSERT INTO book_borrow (user_id, book_copy_id, book_checkout, checkout_librarian_id)
+    VALUES (p_user_id, p_book_copy_id, p_book_checkout, p_checkout_librarian_id);
+
+    -- Check if the insert was successful
+    IF FOUND THEN
+        -- Output success message or perform additional actions
+        RAISE NOTICE 'Book borrow inserted successfully.';
+    ELSE
+        -- Output error message or perform error handling
+        RAISE EXCEPTION 'Failed to insert book borrow.';
+    END IF;
+
+END;
+$$
+    LANGUAGE plpgsql;
+
+-- test successful book borrow
+SELECT insert_book_borrow(1, 4, '2023-05-31', 13);
+-- test failed book borrow
+SELECT insert_book_borrow(1, 2, '2023-05-31', 13);
+
+
+
+-- 9. Book reservation (for patron user)
+CREATE FUNCTION insert_book_reservation(
+    p_book_copy_id integer,
+    p_patron_id integer,
+    p_reservation_date date
+)
+    RETURNS void AS
+$$
+BEGIN
+    INSERT INTO book_reservation_new (book_copy_id, user_id, reservation_status, reservation_date)
+    VALUES (p_book_copy_id, p_patron_id, 'ACTIVE', p_reservation_date);
+
+    -- Check if the insert was successful
+    IF FOUND THEN
+        -- Output success message or perform additional actions
+        RAISE NOTICE 'Book reservation inserted successfully.';
+    ELSE
+        -- Output error message or perform error handling
+        RAISE EXCEPTION 'Failed to insert book reservation.';
+    END IF;
+END;
+$$
+    LANGUAGE plpgsql;
+
+-- test successful book reservation
+SELECT insert_book_reservation(4, 2, '2023-05-31');
+-- test failed book reservation
+SELECT insert_book_reservation(1, 2, '2023-05-31');
+
+
+
+-- 10. Calculate the price for each day the book is not returned
+CREATE FUNCTION calculate_total_price_for_unreturned_books(p_card_number integer, p_book_title varchar)
+    RETURNS numeric AS
 $$
 DECLARE
-    visited_count INTEGER;
+    late_fee    numeric := 15; -- Late fee charge per day
+    total_price numeric := 0; -- Total price to be paid
 BEGIN
-    SELECT COUNT(*)
-    INTO visited_count
-    FROM event_users eu
-    WHERE eu.user_id = p_user_id;
+    SELECT COALESCE(SUM((days_borrowed - 21) * late_fee), 0)
+    INTO total_price
+    FROM unreturned_books
+    WHERE card_number = p_card_number
+      AND days_borrowed > 21
+      AND (p_book_title is NULL OR title ILIKE '%' || p_book_title || '%');
 
-    RETURN visited_count;
+    RETURN total_price;
 END;
-
-
---Calculate late fee for a book return
-    CREATE OR REPLACE FUNCTION calculate_late_fee(
-    p_borrow_id INTEGER
-) RETURNS NUMERIC AS $$
-DECLARE
-    days_late INTEGER;
-late_fee NUMERIC;
-BEGIN
-SELECT EXTRACT(DAY FROM (bb.book_return - bb.book_checkout))
-INTO days_late
-FROM book_borrow bb
-WHERE bb.id = p_borrow_id;
-
-IF days_late > 0 THEN
-        late_fee := days_late * 0.5; -- Assuming $0.50 per day late fee
-ELSE
-        late_fee := 0;
-END IF;
-
-RETURN late_fee;
-END;
-
-
---Update book reservation status to expired
-CREATE OR REPLACE PROCEDURE expire_book_reservations() AS
 $$
-BEGIN
-    UPDATE book_reservation
-    SET reservation_status = 'EXPIRED'
-    WHERE reservation_date < CURRENT_DATE;
-END;
+    LANGUAGE plpgsql;
 
-
---Leave Book Review
-    CREATE OR REPLACE PROCEDURE leave_book_review(
-    p_patron_id INTEGER,
-    p_book_id INTEGER,
-    p_review TEXT
-) AS $$
-BEGIN
--- Check if the book exists
-IF NOT EXISTS (SELECT 1 FROM book WHERE id = p_book_id) THEN
-        RAISE EXCEPTION 'Book with ID % does not exist.', p_book_id;
-END IF;
-
--- Insert the review into the book_review table
-INSERT INTO book_review (user_id, book_id, review)
-VALUES (p_patron_id, p_book_id, p_review);
-
-RAISE NOTICE 'Review for Book with ID % has been successfully added.', p_book_id;
-END;
-
-
-
-
-
-
-
+-- test total charge for a user for all unreturned books
+SELECT calculate_total_price_for_unreturned_books(102045, NULL);
+-- test total charge for a user for a specific unreturned book
+SELECT calculate_total_price_for_unreturned_books(102045, 'Divine Secrets of the Ya-Ya Sisterhood : A Novel');
