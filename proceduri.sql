@@ -94,6 +94,7 @@ CREATE FUNCTION search_books(
 )
     RETURNS TABLE
             (
+                r_id int,
                 r_title            varchar,
                 r_author_name      varchar,
                 r_category_name    varchar,
@@ -103,7 +104,7 @@ AS
 $$
 BEGIN
     RETURN QUERY
-        SELECT title, author_name, category_name, publication_date
+        SELECT id, title, author_name, category_name, publication_date
         FROM book_search_view
         WHERE (p_author_name IS NULL OR author_name ILIKE '%' || p_author_name || '%')
           AND (p_title IS NULL OR title ILIKE '%' || p_title || '%')
