@@ -1,5 +1,5 @@
 -- 1. Create the login function
-CREATE FUNCTION login(p_email varchar, p_password varchar)
+CREATE OR REPLACE FUNCTION login(p_email varchar, p_password varchar)
     RETURNS BOOLEAN AS
 $$
 DECLARE
@@ -24,7 +24,7 @@ SELECT login('Evelyne.Racicot@library.com', '123');
 
 
 -- 2. Create the register function for patron user
-CREATE FUNCTION register_patron(
+CREATE OR REPLACE FUNCTION register_patron(
     p_email varchar,
     p_user_password varchar,
     p_first_name varchar,
@@ -87,7 +87,7 @@ SELECT register_patron(
 
 
 -- 3. Search books by title, author or category
-CREATE FUNCTION search_books(
+CREATE OR REPLACE FUNCTION search_books(
     p_author_name varchar,
     p_title varchar,
     p_category_name varchar
@@ -125,7 +125,7 @@ FROM search_books(NULL, NULL, 'THRILLER');
 
 
 -- 4. Search author by name
-CREATE FUNCTION search_authors(p_author_name varchar)
+CREATE OR REPLACE FUNCTION search_authors(p_author_name varchar)
     RETURNS TABLE
             (
                 r_id          int,
@@ -152,7 +152,7 @@ FROM search_authors(NULL);
 
 
 -- 5. Search events by name or date
-CREATE FUNCTION search_events(p_event_name varchar, p_event_datetime date)
+CREATE OR REPLACE FUNCTION search_events(p_event_name varchar, p_event_datetime date)
     RETURNS TABLE
             (
                 r_id          int,
@@ -182,7 +182,7 @@ FROM search_events(NULL, '2025-03-24');
 
 
 -- 6. Insert a book copy (for librarian user)
-CREATE FUNCTION insert_book_copy(
+CREATE OR REPLACE FUNCTION insert_book_copy(
     p_book_id integer,
     p_location_id integer,
     p_edition integer,
@@ -215,7 +215,7 @@ FROM insert_book_copy(10, 375, 1, 'PAPERBACK');
 
 
 -- 7. Insert a book review (for patron user)
-CREATE FUNCTION insert_book_review(
+CREATE OR REPLACE FUNCTION insert_book_review(
     p_patron_id integer,
     p_book_id integer,
     p_review text
@@ -331,7 +331,7 @@ SELECT reserve_book(1, 2, '2023-05-31');
 
 
 -- 10. Calculate the price for each day the book is not returned
-CREATE FUNCTION calculate_total_price_for_unreturned_books(p_card_number integer, p_book_title varchar)
+CREATE OR REPLACE FUNCTION calculate_total_price_for_unreturned_books(p_card_number integer, p_book_title varchar)
     RETURNS numeric AS
 $$
 DECLARE
@@ -358,7 +358,7 @@ SELECT calculate_total_price_for_unreturned_books(102045, 'Divine Secrets of the
 
 
 -- extra function to check if a book copy is available by its title
-CREATE FUNCTION is_book_available(p_book_copy_id integer)
+CREATE OR REPLACE FUNCTION is_book_available(p_book_copy_id integer)
     RETURNS boolean AS
 $$
 declare
