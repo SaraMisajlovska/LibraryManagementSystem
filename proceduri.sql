@@ -246,7 +246,7 @@ SELECT insert_book_review(4, 1, 'This book is fantastic!');
 
 
 -- 8. Borrow a book (librarian user to inserts book borrow for patron)
-CREATE FUNCTION insert_book_borrow(
+CREATE OR REPLACE FUNCTION borrow_book(
     p_user_id integer,
     p_book_copy_id integer,
     p_book_checkout date,
@@ -254,9 +254,18 @@ CREATE FUNCTION insert_book_borrow(
 )
     RETURNS void AS
 $$
+declare
+    isBookAvailable boolean;
 BEGIN
-    INSERT INTO book_borrow (user_id, book_copy_id, book_checkout, checkout_librarian_id)
-    VALUES (p_user_id, p_book_copy_id, p_book_checkout, p_checkout_librarian_id);
+    SELECT is_book_available(p_book_copy_id)
+    INTO isBookAvailable;
+
+    IF (isBookAvailable) THEN
+        INSERT INTO book_borrow (user_id, book_copy_id, book_checkout, checkout_librarian_id)
+        VALUES (p_user_id, p_book_copy_id, p_book_checkout, p_checkout_librarian_id);
+    ELSE
+        RAISE EXCEPTION 'Book copy is not available.';
+    END IF;
 
     -- Check if the insert was successful
     IF FOUND THEN
@@ -272,23 +281,32 @@ $$
     LANGUAGE plpgsql;
 
 -- test successful book borrow
-SELECT insert_book_borrow(1, 4, '2023-05-31', 13);
+SELECT borrow_book(1, 4, '2023-05-31', 13);
 -- test failed book borrow
-SELECT insert_book_borrow(1, 2, '2023-05-31', 13);
+SELECT borrow_book(1, 2, '2023-05-31', 13);
 
 
 
 -- 9. Book reservation (for patron user)
-CREATE FUNCTION insert_book_reservation(
+CREATE OR REPLACE FUNCTION reserve_book(
     p_book_copy_id integer,
     p_patron_id integer,
     p_reservation_date date
 )
     RETURNS void AS
 $$
+DECLARE
+    isBookAvailable boolean;
 BEGIN
-    INSERT INTO book_reservation (book_copy_id, user_id, reservation_status, reservation_date)
-    VALUES (p_book_copy_id, p_patron_id, 'ACTIVE', p_reservation_date);
+    SELECT is_book_available(p_book_copy_id)
+    INTO isBookAvailable;
+
+    IF (isBookAvailable) THEN
+        INSERT INTO book_reservation_new (book_copy_id, user_id, reservation_status, reservation_date)
+        VALUES (p_book_copy_id, p_patron_id, 'ACTIVE', p_reservation_date);
+    ELSE
+        RAISE EXCEPTION 'Book copy is not available.';
+    END IF;
 
     -- Check if the insert was successful
     IF FOUND THEN
@@ -303,9 +321,9 @@ $$
     LANGUAGE plpgsql;
 
 -- test successful book reservation
-SELECT insert_book_reservation(4, 2, '2023-05-31');
+SELECT reserve_book(4, 2, '2023-05-31');
 -- test failed book reservation
-SELECT insert_book_reservation(1, 2, '2023-05-31');
+SELECT reserve_book(1, 2, '2023-05-31');
 
 
 
@@ -333,3 +351,29 @@ $$
 SELECT calculate_total_price_for_unreturned_books(102045, NULL);
 -- test total charge for a user for a specific unreturned book
 SELECT calculate_total_price_for_unreturned_books(102045, 'Divine Secrets of the Ya-Ya Sisterhood : A Novel');
+
+
+
+-- extra function to check if a book copy is available by its title
+CREATE FUNCTION is_book_available(p_book_copy_id integer)
+    RETURNS boolean AS
+$$
+declare
+    book_title          varchar;
+    declare book_status varchar;
+BEGIN
+    SELECT title
+    into book_title
+    from book
+             join book_copy bc on book.id = bc.book_id
+    where bc.id = p_book_copy_id;
+
+    SELECT status
+    into book_status
+    from book_availability as ba
+    where ba.book_title = book_title;
+
+    RETURN book_status = 'ACTIVE';
+END;
+
+$$ LANGUAGE plpgsql;
