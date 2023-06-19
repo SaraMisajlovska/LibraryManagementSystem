@@ -131,28 +131,15 @@ FROM patron;
 -- If the book is available, the location of the copy is displayed.
 -- If the book is not available (i.e., it has been borrowed), the name of the patron who has borrowed the book is displayed.
 -- The view also takes into account the fact that some copies may be borrowed by users by joining the book_copy table with the book_borrow table.
-CREATE VIEW book_availability AS
-SELECT book.title            AS book_title,
-       book_copy.edition     AS edition,
-       book_copy.book_format AS format,
-       CASE
-           WHEN book_copy.id IN (SELECT book_copy_id FROM book_borrow WHERE book_return IS NULL) THEN 'BORROWED'
-           ELSE 'AVAILABLE'
-           END               AS status,
-       CASE
-           WHEN book_copy.id IN (SELECT book_copy_id FROM book_borrow)
-               THEN (SELECT CONCAT(librarian.first_name, ' ', librarian.last_name)
-                     FROM librarian
-                              INNER JOIN book_borrow ON librarian.id = book_borrow.checkout_librarian_id
-                     WHERE book_copy.id = book_borrow.book_copy_id)
-           ELSE (SELECT CONCAT(book_location.section, '-', book_location.shelf)
-                 FROM book_location
-                 WHERE book_location.id = book_copy.location_id)
-           END               AS location
-FROM book_copy
-         INNER JOIN book ON book_copy.book_id = book.id;
+CREATE OR REPLACE VIEW book_availability AS
+SELECT b.id AS book_id, b.title, COUNT(bc.id) AS available_copies
+FROM book b
+LEFT JOIN book_copy bc ON b.id = bc.book_id
+LEFT JOIN book_borrow bb ON bc.id = bb.book_copy_id
+WHERE bb.return_librarian_id IS NOT NULL OR (bb.return_librarian_id IS NULL AND bb.id IS NULL)
+GROUP BY b.id, b.title;
 
---view 11 show history of borrow
+       
 CREATE VIEW borrowed_books_history AS
 SELECT bb.id                              AS borrow_id,
        u.first_name || ' ' || u.last_name AS borrower_name,
