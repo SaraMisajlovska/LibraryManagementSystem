@@ -358,25 +358,17 @@ SELECT calculate_total_price_for_unreturned_books(102045, 'Divine Secrets of the
 
 
 -- extra function to check if a book copy is available by its title
-CREATE OR REPLACE FUNCTION is_book_available(p_book_copy_id integer)
-    RETURNS boolean AS
+CREATE OR REPLACE FUNCTION is_book_available(book_title VARCHAR)
+RETURNS BOOLEAN AS
 $$
-declare
-    book_title          varchar;
-    declare book_status varchar;
+DECLARE
+    book_available BOOLEAN;
 BEGIN
-    SELECT title
-    into book_title
-    from book
-             join book_copy bc on book.id = bc.book_id
-    where bc.id = p_book_copy_id;
+    SELECT abc.available_copies > 0 INTO book_available
+    FROM available_book_copies as abc
+    WHERE title = book_title;
 
-    SELECT status
-    into book_status
-    from book_availability as ba
-    where ba.book_title = book_title;
-
-    RETURN book_status = 'ACTIVE';
+    RETURN book_available;
 END;
-
-$$ LANGUAGE plpgsql;
+$$
+LANGUAGE plpgsql;
