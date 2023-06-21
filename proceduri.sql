@@ -6,10 +6,10 @@ DECLARE
     user_exists BOOLEAN;
 BEGIN
     -- Check if the user exists in the table
-    SELECT EXISTS (SELECT 1
-                   FROM library_user
-                   WHERE email = p_email
-                     AND user_password = p_password)
+    SELECT EXISTS(SELECT 1
+                  FROM library_user
+                  WHERE email = p_email
+                    AND user_password = p_password)
     INTO user_exists;
 
     RETURN user_exists;
@@ -94,7 +94,7 @@ CREATE OR REPLACE FUNCTION search_books(
 )
     RETURNS TABLE
             (
-                r_id int,
+                r_id               int,
                 r_title            varchar,
                 r_author_name      varchar,
                 r_category_name    varchar,
@@ -155,7 +155,7 @@ FROM search_authors(NULL);
 CREATE OR REPLACE FUNCTION search_events(p_event_name varchar, p_event_datetime date)
     RETURNS TABLE
             (
-                r_id          int,
+                r_id             int,
                 r_event_name     varchar(255),
                 r_description    text,
                 r_event_datetime timestamp
@@ -242,16 +242,24 @@ $$ LANGUAGE plpgsql;
 
 
 -- MUST EXECUTE: reset primary key sequence for book borrow
-SELECT pg_catalog.setval(pg_get_serial_sequence('book_review', 'id'), MAX(id)) FROM book_review;
+SELECT pg_catalog.setval(pg_get_serial_sequence('book_review', 'id'), MAX(id))
+FROM book_review;
 -- test successful book review
 SELECT insert_book_review(4, 1, 'This book is fantastic!');
 
+-- MUST EXECUTE: reset primary key sequence for book borrow
+SELECT pg_catalog.setval(pg_get_serial_sequence('book_borrow', 'id'), COALESCE(MAX(id), 1)) FROM book_borrow;
+SELECT id, COUNT(*)
+FROM book_borrow
+GROUP BY id
+HAVING COUNT(*) > 1;
 
 
 -- 8. Borrow a book (librarian user to inserts book borrow for patron)
 CREATE OR REPLACE FUNCTION borrow_book(
     p_user_id integer,
     p_book_copy_id integer,
+    book_title varchar,
     p_book_checkout date,
     p_checkout_librarian_id integer
 )
@@ -260,12 +268,12 @@ $$
 declare
     isBookAvailable boolean;
 BEGIN
-    SELECT is_book_available(p_book_copy_id)
+    SELECT is_book_available(book_title)
     INTO isBookAvailable;
 
     IF (isBookAvailable) THEN
-        INSERT INTO book_borrow (user_id, book_copy_id, book_checkout, checkout_librarian_id)
-        VALUES (p_user_id, p_book_copy_id, p_book_checkout, p_checkout_librarian_id);
+        INSERT INTO book_borrow (user_id, book_copy_id, book_checkout, checkout_librarian_id, return_librarian_id)
+        VALUES (p_user_id, p_book_copy_id, p_book_checkout, p_checkout_librarian_id, null);
     ELSE
         RAISE EXCEPTION 'Book copy is not available.';
     END IF;
@@ -283,16 +291,17 @@ END;
 $$
     LANGUAGE plpgsql;
 
--- test successful book borrow
-SELECT borrow_book(1, 4, '2023-05-31', 13);
--- test failed book borrow
-SELECT borrow_book(1, 2, '2023-05-31', 13);
+-- -- test successful book borrow
+-- SELECT borrow_book(1, 4, '2023-05-31', 13);
+-- -- test failed book borrow
+-- SELECT borrow_book(1, 2, '2023-05-31', 13);
 
 
 
 -- 9. Book reservation (for patron user)
 CREATE OR REPLACE FUNCTION reserve_book(
     p_book_copy_id integer,
+    book_title varchar,
     p_patron_id integer,
     p_reservation_date date
 )
@@ -301,7 +310,7 @@ $$
 DECLARE
     isBookAvailable boolean;
 BEGIN
-    SELECT is_book_available(p_book_copy_id)
+    SELECT is_book_available(book_title)
     INTO isBookAvailable;
 
     IF (isBookAvailable) THEN
@@ -359,16 +368,17 @@ SELECT calculate_total_price_for_unreturned_books(102045, 'Divine Secrets of the
 
 -- extra function to check if a book copy is available by its title
 CREATE OR REPLACE FUNCTION is_book_available(book_title VARCHAR)
-RETURNS BOOLEAN AS
+    RETURNS BOOLEAN AS
 $$
 DECLARE
     book_available BOOLEAN;
 BEGIN
-    SELECT abc.available_copies > 0 INTO book_available
-    FROM available_book_copies as abc
+    SELECT abc.available_copies > 0
+    INTO book_available
+    FROM book_availability as abc
     WHERE title = book_title;
 
     RETURN book_available;
 END;
 $$
-LANGUAGE plpgsql;
+    LANGUAGE plpgsql;
