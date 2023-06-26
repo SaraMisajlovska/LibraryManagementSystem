@@ -149,23 +149,23 @@ FROM search_authors('Tony Robbins');
 SELECT *
 FROM search_authors(NULL);
 
-
-
 -- 5. Search events by name or date
+ DROP FUNCTION search_events(character varying,date);
 CREATE OR REPLACE FUNCTION search_events(p_event_name varchar, p_event_datetime date)
     RETURNS TABLE
             (
                 r_id             int,
                 r_event_name     varchar(255),
                 r_description    text,
-                r_event_datetime timestamp
+                r_event_datetime timestamp,
+                r_num_attendees  bigint
             )
 AS
 $$
 BEGIN
     RETURN QUERY
-        SELECT id, event_name, description, event_datetime
-        FROM library_event
+        SELECT event_id, event_name, description, event_datetime, num_attendees
+        FROM event_attendance
         WHERE (p_event_name IS NULL OR event_name ILIKE '%' || p_event_name || '%')
           AND (p_event_datetime IS NULL OR DATE(event_datetime) = p_event_datetime);
 END;
@@ -295,7 +295,6 @@ $$
 -- SELECT borrow_book(1, 4, '2023-05-31', 13);
 -- -- test failed book borrow
 -- SELECT borrow_book(1, 2, '2023-05-31', 13);
-
 
 
 -- 9. Book reservation (for patron user)
