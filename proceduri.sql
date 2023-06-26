@@ -157,15 +157,14 @@ CREATE OR REPLACE FUNCTION search_events(p_event_name varchar, p_event_datetime 
                 r_id             int,
                 r_event_name     varchar(255),
                 r_description    text,
-                r_event_datetime timestamp,
-                r_num_attendees  bigint
+                r_event_datetime timestamp
             )
 AS
 $$
 BEGIN
     RETURN QUERY
-        SELECT event_id, event_name, description, event_datetime, num_attendees
-        FROM event_attendance
+        SELECT id, event_name, description, event_datetime
+        FROM library_event
         WHERE (p_event_name IS NULL OR event_name ILIKE '%' || p_event_name || '%')
           AND (p_event_datetime IS NULL OR DATE(event_datetime) = p_event_datetime);
 END;
