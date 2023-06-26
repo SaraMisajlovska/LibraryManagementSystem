@@ -149,9 +149,8 @@ FROM search_authors('Tony Robbins');
 SELECT *
 FROM search_authors(NULL);
 
-
-
 -- 5. Search events by name or date
+ DROP FUNCTION search_events(character varying,date);
 CREATE OR REPLACE FUNCTION search_events(p_event_name varchar, p_event_datetime date)
     RETURNS TABLE
             (
@@ -295,7 +294,6 @@ $$
 -- SELECT borrow_book(1, 4, '2023-05-31', 13);
 -- -- test failed book borrow
 -- SELECT borrow_book(1, 2, '2023-05-31', 13);
-
 
 
 -- 9. Book reservation (for patron user)
